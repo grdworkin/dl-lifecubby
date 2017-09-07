@@ -5,6 +5,7 @@ import json
 import re
 import logging
 import os.path
+import textwrap
 
 from bs4 import BeautifulSoup
 
@@ -86,7 +87,7 @@ def parse_entry(r):
     return entry
 
 
-def make_filename(attachment, title, date,index):
+def make_filename(title, date,index):
 
     # 05/22/2017
     month,day,year = date.split('/')
@@ -94,6 +95,9 @@ def make_filename(attachment, title, date,index):
 
     newtitle = re.sub('\W+','_',title.strip())
     newtitle = re.sub('[^a-zA-Z0-9]$','',newtitle)
+
+    if index is None:
+        return '{}-{}'.format(newdate,newtitle)
 
     if newtitle in index:
         index[newtitle]+=1
@@ -137,7 +141,6 @@ def fetch_file(url,filename):
         
     else:
         logging.err("Something bad happened!")
-
 
     return r.status_code
 
@@ -201,18 +204,22 @@ if __name__ == '__main__':
         if entry:
 
             for attachment in entry['attachments']:
-                filename=make_filename(attachment,entry['title'], entry['date'],index)
+                filename=make_filename(entry['title'], entry['date'],index)
                 #print("new filename={}".format(filename))
                 print("attachment url = " + attachment)
 
-                fetch_file(attachment, filename)
-                #attachment_page = session_request.get(attachment)
-                #if attachment_page:
-                    #print(attachment_page.status_code)
+                rc = fetch_file(attachment, filename)
 
-                    #image_url = extract_image(attachment_page)
+                metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
+                if rc:
+                    try:
+                        fd = open(metadata_filename, 'w', newline='\n')
+                    except:
+                        logging.err("failed opening {} for metadata writing!".format(metadata_filename))
 
-            
+                    fd.write('Title: {}\n'.format(entry['title']))
+                    fd.write('Date: {}\n'.format(entry['date']))
+                    fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
 
 
     
