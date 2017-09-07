@@ -191,7 +191,6 @@ if __name__ == '__main__':
 
     for link in soup.find_all(class_='preview', limit=4):
         raw_src=link.get('href')
-        # /cubby_view.html?entryid=8199206&saveit=Yes
 
         entry_url = url['base'] + raw_src
         print(entry_url)
@@ -220,23 +219,4 @@ if __name__ == '__main__':
                     fd.write('Title: {}\n'.format(entry['title']))
                     fd.write('Date: {}\n'.format(entry['date']))
                     fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
-
-
-    
-        #https://www.lifecubby.me/i/rmrmJYwEbwi6PyZXeF4
-
-        #print(entry.status_code)
-        #print(entry.cookies)
-        #print(entry.history)
-        #print(entry.url)
-
-        #stripped_src = re.sub('[a-z]{4}$', '', raw_src, flags=re.I)
-        #print('{} {}'.format(raw_src, stripped_src))
-
-        #entry_name = link.parent.parent.parent.b.text
-        #print(entry_name);
-
-        #//*[@id="entries-wrapper"]/div[6]/div/b
-
-    
 
