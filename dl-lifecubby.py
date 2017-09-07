@@ -138,6 +138,7 @@ def fetch_file(url,filename):
             logging.err("failed opening {} for writing!".format(filename))
 
         fd.write(r.content)
+        fd.close()
         
     else:
         logging.err("Something bad happened!")
@@ -202,6 +203,23 @@ if __name__ == '__main__':
 
         if entry:
 
+
+            metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
+            if os.path.isfile(metadata_filename):
+                logging.info("Metadata file {} alreadt exists.  Skipping this one.".format(metadata_filename))
+                continue
+
+            try:
+                fd = open(metadata_filename, 'w', newline='\n')
+            except:
+                logging.err("failed opening {} for metadata writing!".format(metadata_filename))
+
+            fd.write('Title: {}\n'.format(entry['title']))
+            fd.write('Date: {}\n'.format(entry['date']))
+            fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
+
+            fd.close()
+
             for attachment in entry['attachments']:
                 filename=make_filename(entry['title'], entry['date'],index)
                 #print("new filename={}".format(filename))
@@ -209,14 +227,4 @@ if __name__ == '__main__':
 
                 rc = fetch_file(attachment, filename)
 
-                metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
-                if rc:
-                    try:
-                        fd = open(metadata_filename, 'w', newline='\n')
-                    except:
-                        logging.err("failed opening {} for metadata writing!".format(metadata_filename))
-
-                    fd.write('Title: {}\n'.format(entry['title']))
-                    fd.write('Date: {}\n'.format(entry['date']))
-                    fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
 
