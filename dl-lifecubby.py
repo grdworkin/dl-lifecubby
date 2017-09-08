@@ -172,6 +172,17 @@ def extract_image(page):
         return img_src.get('src')
 
 
+def check_link(link, seen):
+    if link not in seen:
+        seen[link] = True
+        logging.info("New login link: {}".format(link))
+        return True
+    else:
+        logging.info("Previously seen login link: {}".format(link))
+        return False
+
+
+
 
 if __name__ == '__main__':
 
@@ -208,13 +219,7 @@ if __name__ == '__main__':
     # seed the "seen" list with the first batch.
     logging.info("Adding entries from initial page at login")
     for link in login_soup.find_all(class_='preview'):
-        l = link.get('href')
-
-        if l not in seen:
-            seen[l] = True
-            logging.info("New login link: {}".format(l))
-        else:
-            logging.info("Previously seen login link: {}".format(l))
+        check_link(link.get('href'), seen)
 
 
     # fetch more pages, until it wraps around...
@@ -228,29 +233,26 @@ if __name__ == '__main__':
 
         found = 0
         for link in soup.find_all(class_='preview'):
-            l = link.get('href')
-            if l not in seen:
-                seen[l] = True
+            status = check_link(link.get('href'), seen)
+            if status:
                 found += 1
-                logging.info("New more link: {}".format(l))
-            else:
-                logging.info("Previously seen more link: {}".format(l))
 
+        # if all links already exist, "found" will still be zero, and we
+        # know that we've wrapped within the list.
+        # if we are still adding links, add the soup to the bowl for
+        # later consuption
         if not found:
             done = True
         else:
             bowl.append(soup)
 
 
-
-    #print(soup.prettify())
-
-    #entries = soup.find_all(class_='entry')
-    logging.info("Final url list: {}".format(str(seen)))
-
+    # consume all soup in the bowl...
+    # maybe this is a pun too far?
     for soup in bowl:
 
-        for link in soup.find_all(class_='preview', limit=4):
+        # Check all links in the given blob fo HTMLish conent
+        for link in soup.find_all(class_='preview', limit=0):
             raw_src = link.get('href')
 
             entry_url = url['base'] + raw_src
@@ -259,15 +261,31 @@ if __name__ == '__main__':
 
             entry = parse_entry(session_request.get(entry_url))
 
-            print(entry)
+            #print(entry)
 
+            # if something was found--which I'm sure it was...
             if entry:
 
+                #build text file name
                 metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
+
+                # A cheap caching check:  if the .txt file is present, assume that everything
+                # else is as well.  Otherwise, the download links do not, a-priori indicate
+                # if it's an image or not.  THe info is present in the
+                # HTTP headers, but by the time we have downloaded that,
+                # we may as well write the entire output to a file.  This is somewhat inefficient
+                # since we may download somethign taht already exists, before we know what it 
+                # actually is.
                 if os.path.isfile(metadata_filename):
-                    logging.info("Metadata file {} alreadt exists.  Skipping this one.".format(metadata_filename))
+                    logging.info("Metadata file {} already exists.  Skipping this one.".format(metadata_filename))
                     continue
 
+                # if the txt file is missing, start fetching the attachments
+                for attachment in entry['attachments']:
+                    filename = make_filename(entry['title'], entry['date'], index)
+                    rc = fetch_file(attachment, filename)
+
+                # write out the metadata file
                 try:
                     fd = open(metadata_filename, 'w', newline='\n')
                 except OSError:
@@ -279,10 +297,4 @@ if __name__ == '__main__':
 
                 fd.close()
 
-                for attachment in entry['attachments']:
-                    filename = make_filename(entry['title'], entry['date'], index)
-                    #print("new filename={}".format(filename))
-                    print("attachment url = " + attachment)
-
-                    rc = fetch_file(attachment, filename)
-
+ 
