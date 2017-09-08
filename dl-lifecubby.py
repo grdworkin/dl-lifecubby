@@ -6,6 +6,7 @@ import re
 import logging
 import os.path
 import textwrap
+import hashlib
 
 from bs4 import BeautifulSoup
 
@@ -29,6 +30,7 @@ url = {
     'hub' :      'https://www.lifecubby.me/cubby_hub.html',
     'entry' :    'https://www.lifecubby.me/cubby_view.html?entryid={}&saveit=Yes',
     'download' : 'https://www.lifecubby.me/d',
+    'load_more' :'https://www.lifecubby.me/ajax/load_more.php',
 }
 
 
@@ -58,6 +60,8 @@ def parse_entry(r):
     entry = {}
 
     soup = BeautifulSoup(r.text, 'html.parser')
+
+    entry['url'] = r.url
 
     entry['title'] = re.sub('.*entry title:', '', soup.find(id='entry_title-field').text, flags=re.I).strip()
 
@@ -183,48 +187,95 @@ if __name__ == '__main__':
     #print(login.text)
     print('-----------------')
 
-    soup = BeautifulSoup(login.text, 'html.parser')
+    pages = []
+    pages.append(login.text)
+
+    bowl = []
+    seen = {}
+
+    login_soup = BeautifulSoup(login.text, 'html.parser')
+
+    bowl.append(login_soup)
+
+    # seed the "seen" list with the first batch.
+    logging.info("Adding entries from initial page at login")
+    for link in login_soup.find_all(class_='preview'):
+        l = link.get('href')
+
+        if l not in seen:
+            seen[l] = True
+            logging.info("New login link: {}".format(l))
+        else:
+            logging.info("Previously seen login link: {}".format(l))
+   
+
+    # fetch more pages, until it wraps around...
+    # load_more.php returns up to 5 links at a time, 
+    # then loops again, in batches of 5
+    done = False
+    while not done:
+
+        another_page = session_request.get(url['load_more'])
+        soup = BeautifulSoup(another_page.text, 'html.parser')
+
+        found = 0
+        for link in soup.find_all(class_='preview'):
+            l = link.get('href')
+            if l not in seen:
+                seen[l] = True
+                found += 1
+                logging.info("New more link: {}".format(l))
+            else:
+                logging.info("Previously seen more link: {}".format(l))
+
+        if not found:
+            done = True
+        else:
+            bowl.append(soup)
+
     
+
     #print(soup.prettify())
 
     #entries = soup.find_all(class_='entry')
+    logging.info("Final url list: {}".format(str(seen)))
+
+    for soup in bowl:
+
+        for link in soup.find_all(class_='preview', limit=4):
+            raw_src=link.get('href')
+
+            entry_url = url['base'] + raw_src
+            #print(entry_url)
 
 
-    for link in soup.find_all(class_='preview', limit=4):
-        raw_src=link.get('href')
+            entry = parse_entry(session_request.get(entry_url))
 
-        entry_url = url['base'] + raw_src
-        print(entry_url)
+            print(entry)
 
+            if entry:
 
-        entry = parse_entry(session_request.get(entry_url))
+                metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
+                if os.path.isfile(metadata_filename):
+                    logging.info("Metadata file {} alreadt exists.  Skipping this one.".format(metadata_filename))
+                    continue
 
-        print(entry)
+                try:
+                    fd = open(metadata_filename, 'w', newline='\n')
+                except:
+                    logging.err("failed opening {} for metadata writing!".format(metadata_filename))
 
-        if entry:
+                fd.write('Title: {}\n'.format(entry['title']))
+                fd.write('Date: {}\n'.format(entry['date']))
+                fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
 
+                fd.close()
 
-            metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
-            if os.path.isfile(metadata_filename):
-                logging.info("Metadata file {} alreadt exists.  Skipping this one.".format(metadata_filename))
-                continue
+                for attachment in entry['attachments']:
+                    filename=make_filename(entry['title'], entry['date'],index)
+                    #print("new filename={}".format(filename))
+                    print("attachment url = " + attachment)
 
-            try:
-                fd = open(metadata_filename, 'w', newline='\n')
-            except:
-                logging.err("failed opening {} for metadata writing!".format(metadata_filename))
-
-            fd.write('Title: {}\n'.format(entry['title']))
-            fd.write('Date: {}\n'.format(entry['date']))
-            fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
-
-            fd.close()
-
-            for attachment in entry['attachments']:
-                filename=make_filename(entry['title'], entry['date'],index)
-                #print("new filename={}".format(filename))
-                print("attachment url = " + attachment)
-
-                rc = fetch_file(attachment, filename)
+                    rc = fetch_file(attachment, filename)
 
 
