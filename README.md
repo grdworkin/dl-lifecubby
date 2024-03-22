@@ -22,19 +22,11 @@ If you are not familiar with python or especially unix/powershell, then this mig
     * [Windows](https://docs.python.org/3/faq/windows.html#how-do-i-run-a-python-program-under-windows)
     * Mac
         * [Use the terminal app](https://support.apple.com/guide/terminal/welcome/mac)
-* Create a venv
-    * [Documentation](https://docs.python.org/3/library/venv.html)
-    * Navigate to the directory that you downloaded
-        * [Windows Powershell](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cd)
-        * [Mac (specifically "How to access other folders/directories")](https://www.macworld.com/article/221277/command-line-navigating-files-folders-mac-terminal.html)
-        * Windows example in Powershell that was downloaded to the current user's download folder and uncompressed there
-            *  ```cd ~\downloads\dl-lifecubby-mainline\dl-lifecubby-mainline\```
-    * [Create the venv](https://docs.python.org/3/library/venv.html#creating-virtual-environments)
-        * Example continued from above
-            * ```python3 -m venv venv```
-    * [Activate the venv](https://docs.python.org/3/library/venv.html#how-venvs-work)
-        * Example continued from above
-            * ```.\venv\Scripts\Activate.ps1```
+* Navigate to the directory that you downloaded
+    * [Windows Powershell](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cd)
+    * [Mac (specifically "How to access other folders/directories")](https://www.macworld.com/article/221277/command-line-navigating-files-folders-mac-terminal.html)
+    * Windows example in Powershell that was downloaded to the current user's download folder and uncompressed there
+         *  ```cd ~\downloads\dl-lifecubby-mainline\dl-lifecubby-mainline\```
 * Install the packages required for the script
     * [Documentation](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#using-a-requirements-file)
     * Example continued from above
@@ -44,4 +36,4 @@ If you are not familiar with python or especially unix/powershell, then this mig
         * ```python3 main.py```
     * If it fails and the terminal/powershell window stays open then you can just rerun the script with the above command. If it fails with the same error twice then it probably won't work running it a 3rd time.
     * To force it to skip that entry on a rerun, create the file metadata.txt in "current directory/date/entry id/" for the failed entry with any data in it.
-    * If the terminal/powershell closes you will need to rerun "Activate the venv" from above.
+    * If the terminal/powershell closes you will need to navigate to the directory that you downloaded
