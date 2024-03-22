@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import re
 import logging
 import os.path
@@ -62,10 +60,14 @@ def parse_entry(r):
 
     entry['url'] = r.url
 
-    entry['title'] = re.sub(r'.*entry title:',
-                            '',
-                            soup.find(id='entry_title-field').text,
-                            flags=re.I).strip()
+    tnode = soup.find(id='entry_title-field')
+    if hasattr(tnode, 'text'):
+         entry['title'] = re.sub(r'.*entry title:',
+                             '',
+                             soup.find(id='entry_title-field').text,
+                             flags=re.I).strip()
+    else:
+        entry['title'] = '<none>'
 
     entry['date'] = re.sub(r'.*date:',
                            '',
@@ -134,6 +136,8 @@ def fetch_file(url, filename):
         extension = 'png'
     elif req.headers['Content-Type'] == 'video/quicktime':
         extension = 'mov'
+    elif req.headers['Content-Type'] == 'application/pdf':
+        extension = 'pdf'
 
     filename = filename + '.' + extension
 
@@ -249,25 +253,32 @@ if __name__ == '__main__':
 
     # consume all soup in the bowl...
     # maybe this is a pun too far?
+    p = re.compile(r'entryid=(?P<entry_id>\d*)')
     for soup in bowl:
 
         # Check all links in the given blob fo HTMLish conent
         for link in soup.find_all(class_='preview', limit=0):
             raw_src = link.get('href')
+            
+            match = p.search(raw_src)
 
             entry_url = url['base'] + raw_src
             #print(entry_url)
 
-
             entry = parse_entry(session_request.get(entry_url))
-
+            
             #print(entry)
+
+            entry['id'] = match['entry_id']
 
             # if something was found--which I'm sure it was...
             if entry:
+                month, day, year = entry['date'].split('/')
+                folder_name = f"{year}{month}{day}/{entry['id']}/"
+                os.makedirs(folder_name, exist_ok=True)
 
                 #build text file name
-                metadata_filename = make_filename(entry['title'], entry['date'], None)+'.txt'
+                metadata_filename = f'{folder_name}/metadata.txt'
 
                 # A cheap caching check:  if the .txt file is present, assume that everything
                 # else is as well.  Otherwise, the download links do not, a-priori indicate
@@ -281,19 +292,24 @@ if __name__ == '__main__':
                     continue
 
                 # if the txt file is missing, start fetching the attachments
+                index = 0
                 for attachment in entry['attachments']:
-                    filename = make_filename(entry['title'], entry['date'], index)
+                    filename = f"{folder_name}/{index}"
                     rc = fetch_file(attachment, filename)
+                    index+=1
+                
+                fetch_file(f'https://www.lifecubby.me/cubby_view.html?entryid={entry["id"]}&render=pdf',
+                           f'{folder_name}/report')
 
                 # write out the metadata file
                 try:
-                    fd = open(metadata_filename, 'w', newline='\n')
+                    fd = open(metadata_filename, 'wb')
                 except OSError:
                     logging.error("failed opening {} for metadata writing!".format(metadata_filename))
 
-                fd.write('Title: {}\n'.format(entry['title']))
-                fd.write('Date: {}\n'.format(entry['date']))
-                fd.write(textwrap.fill('Description: ' + entry['description'])+'\n')
+                fd.write(f"Title: {entry['title']}\n".encode('utf8'))
+                fd.write(f"Date: {entry['date']}\n".encode('utf8'))
+                fd.write(f"Description: {entry['description']}\n".encode('utf8'))
 
                 fd.close()
 
