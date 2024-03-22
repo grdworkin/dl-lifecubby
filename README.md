@@ -1,6 +1,3 @@
-# dl-lifecubby
-Thank you hawson for the work you put into this. This is almost entirely their work but slightly updated for the sunsetting of lifecubby.
-
 This is a small python script to pull down pictures and videos from lifecubby.
 
 This script will download all of the entries in life cubby into the current directory. For each entry, it will create a folder (along with date) and in that folder download all of the pictures and videos along with the pdf report for it and a text file with the description, title and date. The structure of the folders will look like "current directory/date/entry id/files."
@@ -37,3 +34,5 @@ If you are not familiar with python or especially unix/powershell, then this mig
     * If it fails and the terminal/powershell window stays open then you can just rerun the script with the above command. If it fails with the same error twice then it probably won't work running it a 3rd time.
     * To force it to skip that entry on a rerun, create the file metadata.txt in "current directory/date/entry id/" for the failed entry with any data in it.
     * If the terminal/powershell closes you will need to navigate to the directory that you downloaded
+
+Thank you hawson for the work you put into this. This is almost entirely their work but slightly updated for the sunsetting of lifecubby.
